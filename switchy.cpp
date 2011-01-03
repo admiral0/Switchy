@@ -37,26 +37,22 @@
 Switchy::Switchy(QObject *parent, const QVariantList &args)
     : Plasma::Applet(parent, args)
 {
-    // this will get us the standard applet background, for free!
     setBackgroundHints(DefaultBackground);
     setHasConfigurationInterface(true);
     cards=NULL;
     c1=new Plasma::PushButton(this);
     c2=new Plasma::PushButton(this);
     ui=new Ui::vgaswitcheroo;
-    setAspectRatioMode(Plasma::InvalidAspectRatioMode);
+    setAspectRatioMode(Plasma::IgnoreAspectRatio);
     tmr=new QTimer();
 }
 
 
 Switchy::~Switchy()
 {
-    if (hasFailedToLaunch()) {
-        // Do some cleanup here
-    } else {
-        // Save settings
-    }
-    setAspectRatioMode(Plasma::IgnoreAspectRatio);
+    if(cards)
+      delete cards;
+    delete c1,c2,ui,tmr;
 }
 
 void Switchy::init()
@@ -68,8 +64,10 @@ void Switchy::init()
   if(vgapath=="default")
      vgapath=VGA_SWITCHEROO;
   cards=getInfo();
-  if(!cards)
-    qDebug()<< "System is fucked really hard!!!";
+  if(!cards || cards->size()==0){
+    qDebug()<< "No hardware found!!!";
+    setFailedToLaunch(TRUE,i18n("Vga switcheroo not found!"));
+  }
   
   
   //Drawing widget
