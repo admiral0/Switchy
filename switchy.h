@@ -1,9 +1,9 @@
 /***************************************************************************
- *   Copyright (C) %{CURRENT_YEAR} by %{AUTHOR} <%{EMAIL}>                            *
+ *   Copyright (C) 2010 by admiral0 <admiral0@tuxfamily.org>               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 2 of the License, or     *
+ *   the Free Software Foundation; either version 3 of the License, or     *
  *   (at your option) any later version.                                   *
  *                                                                         *
  *   This program is distributed in the hope that it will be useful,       *
@@ -17,37 +17,54 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA .        *
  ***************************************************************************/
 
-// Here we avoid loading the header multiple times
 #ifndef SWITCHY_HEADER
 #define SWITCHY_HEADER
 
 #include <KIcon>
-// We need the Plasma Applet headers
 #include <Plasma/Applet>
 #include <Plasma/Svg>
+#include "videoinfo.h"
 
+
+#define VGA_SWITCHEROO "/proc/sys/debug/vgaswitcheroo/switch"
+
+class QTimer;
+namespace Ui {
+class vgaswitcheroo;
+}
+
+class QWidget;
+namespace Plasma {
+class PushButton;
+}
 class QSizeF;
 
-// Define our plasma Applet
 class Switchy : public Plasma::Applet
 {
     Q_OBJECT
     public:
-        // Basic Create/Destroy
         Switchy(QObject *parent, const QVariantList &args);
         ~Switchy();
 
-        // The paintInterface procedure paints the applet to the desktop
-        void paintInterface(QPainter *painter,
-                const QStyleOptionGraphicsItem *option,
-                const QRect& contentsRect);
         void init();
+	void createConfigurationInterface ( KConfigDialog* parent );
+private slots:
+    void confAccepted();
+    void updateApplet();
 
-    private:
-        Plasma::Svg m_svg;
-        KIcon m_icon;
+private:
+	QList<VideoInfo*>* getInfo(); 
+	QList<VideoInfo*> *cards;
+	QString card1name;
+	QString card2name;
+	QString vgapath;
+	Plasma::PushButton *c1;
+	Plasma::PushButton *c2;
+	QWidget *vgaswitcheroo;
+	Ui::vgaswitcheroo *ui;
+	QTimer *tmr;
+	
 };
- 
-// This is the command that links your applet to the .desktop file
+
 K_EXPORT_PLASMA_APPLET(switchy, Switchy)
 #endif

@@ -12,13 +12,13 @@ include_directories(
    ${KDE4_INCLUDES}
    )
  
-# We add our source code here
-set(switchy_SRCS switchy.cpp)
- 
-# Now make sure all files get to the right place
+set(switchy_SRCS videoinfo.cpp switchy.cpp)
+
+kde4_add_ui_files(switchy_SRCS vgaswitcheroo.ui)
+
 kde4_add_plugin(plasma_applet_switchy ${switchy_SRCS})
 target_link_libraries(plasma_applet_switchy 
-                      ${KDE4_PLASMA_LIBS} ${KDE4_KDEUI_LIBS})
+                      ${KDE4_PLASMA_LIBS} ${KDE4_KDEUI_LIBS} ${KDE4_KIO_LIBS})
  
 install(TARGETS plasma_applet_switchy
         DESTINATION ${PLUGIN_INSTALL_DIR})
