@@ -25,3 +25,5 @@ install(TARGETS plasma_applet_switchy
  
 install(FILES plasma-applet-switchy.desktop
         DESTINATION ${SERVICES_INSTALL_DIR})
+
+add_subdirectory(daemon)

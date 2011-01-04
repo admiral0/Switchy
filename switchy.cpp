@@ -52,7 +52,8 @@ Switchy::~Switchy()
 {
     if(cards)
       delete cards;
-    delete c1,c2,ui,tmr;
+    delete c1;
+    delete c2;delete ui;delete tmr;
 }
 
 void Switchy::init()
