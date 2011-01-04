@@ -24,11 +24,11 @@
 #include <Plasma/Applet>
 #include <Plasma/Svg>
 #include "videoinfo.h"
-#include <qdbusconnection.h>
 
 
 #define VGA_SWITCHEROO "/proc/sys/debug/vgaswitcheroo/switch"
 
+class OrgKdeKSMServerInterfaceInterface;
 class QDBusConnection;
 class QDBusConnection;
 class QTimer;
@@ -72,6 +72,7 @@ private:
 	Ui::vgaswitcheroo *ui;
 	QTimer *tmr;
 	OrgAdmiral0VgaSwitcherooInterface *dbus;
+	OrgKdeKSMServerInterfaceInterface *kde;
 	
 
 };

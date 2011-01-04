@@ -35,7 +35,9 @@
 #include <plasma/widgets/iconwidget.h>
 #include <QGraphicsLinearLayout>
 #include <QTimer>
-#include "Vgad.h"
+#include "vgad.h"
+#include "ksmserver.h"
+#include <KMessageBox>
 Switchy::Switchy(QObject *parent, const QVariantList &args)
     : Plasma::Applet(parent, args)
 {
@@ -48,6 +50,7 @@ Switchy::Switchy(QObject *parent, const QVariantList &args)
     setAspectRatioMode(Plasma::IgnoreAspectRatio);
     tmr=new QTimer();
     dbus=new OrgAdmiral0VgaSwitcherooInterface("org.admiral0.VgaSwitcheroo","/org/admiral0/VgaSwitcheroo", QDBusConnection::systemBus());
+    kde=new OrgKdeKSMServerInterfaceInterface("org.kde.KSMServerInterface","/KSMServer",QDBusConnection::sessionBus());
 }
 
 
@@ -183,7 +186,10 @@ void Switchy::statusChange(int index)
       dbus->Integrated();
     else
       dbus->Discrete();
-    //TODO KDM
+    int res=KMessageBox::questionYesNo(0,i18n("Would you like to logout to switch GPU?"),"Switchy",KStandardGuiItem::yes(),KStandardGuiItem::no(),QString("switchy"));
+    if(res==KMessageBox::Yes){
+      kde->logout();
+    }
   }
   
 }
