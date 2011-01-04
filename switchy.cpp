@@ -22,7 +22,7 @@
 #include <QFontMetrics>
 #include <QSizeF>
 #include <KLocale>
-
+#include <QDebug>
 #include <plasma/svg.h>
 #include <plasma/theme.h>
 #include <QFormLayout>
@@ -47,9 +47,7 @@ Switchy::Switchy(QObject *parent, const QVariantList &args)
     ui=new Ui::vgaswitcheroo;
     setAspectRatioMode(Plasma::IgnoreAspectRatio);
     tmr=new QTimer();
-    conn=new QDBusConnection("switchy");
-    conn->connectToBus(QDBusConnection::SystemBus,"switchy");
-    dbus=new OrgAdmiral0VgaSwitcherooInterface("org.admiral0.VgaSwitcheroo","/org/admiral0/VgaSwitcheroo", *conn);
+    dbus=new OrgAdmiral0VgaSwitcherooInterface("org.admiral0.VgaSwitcheroo","/org/admiral0/VgaSwitcheroo", QDBusConnection::systemBus());
 }
 
 
@@ -88,7 +86,7 @@ void Switchy::init()
   box->addItem(both);
   this->setLayout(box);
   updateApplet();
-  tmr->setInterval(31000);
+  tmr->setInterval(3000);
   connect(tmr,SIGNAL(timeout()),this,SLOT(updateApplet()));
   connect(both,SIGNAL(clicked()),this,SLOT(unusedOff()));
   connect(status,SIGNAL(currentIndexChanged(int)),this,SLOT(statusChange(int)));
@@ -178,6 +176,8 @@ void Switchy::updateApplet()
 }
 void Switchy::statusChange(int index)
 {
+  if(index==-1)
+    return;
   if(!cards->at(index)->isUsed()){
     if(index==0)
       dbus->Integrated();

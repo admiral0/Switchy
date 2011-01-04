@@ -72,7 +72,6 @@ private:
 	Ui::vgaswitcheroo *ui;
 	QTimer *tmr;
 	OrgAdmiral0VgaSwitcherooInterface *dbus;
-	QDBusConnection *conn;
 	
 
 };
