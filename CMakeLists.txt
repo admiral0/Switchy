@@ -13,10 +13,10 @@ include_directories(
    )
  
 set(switchy_SRCS videoinfo.cpp switchy.cpp)
-
+QT4_ADD_DBUS_INTERFACE(switchy_DBUS daemon/vgad.xml Vgad)
 kde4_add_ui_files(switchy_SRCS vgaswitcheroo.ui)
 
-kde4_add_plugin(plasma_applet_switchy ${switchy_SRCS})
+kde4_add_plugin(plasma_applet_switchy ${switchy_SRCS} ${switchy_DBUS})
 target_link_libraries(plasma_applet_switchy 
                       ${KDE4_PLASMA_LIBS} ${KDE4_KDEUI_LIBS} ${KDE4_KIO_LIBS})
  

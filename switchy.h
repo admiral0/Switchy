@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2010 by admiral0 <admiral0@tuxfamily.org>               *
+ *   Copyright (C) 2010-2011 by admiral0 <admiral0@tuxfamily.org>               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,10 +24,13 @@
 #include <Plasma/Applet>
 #include <Plasma/Svg>
 #include "videoinfo.h"
+#include <qdbusconnection.h>
 
 
 #define VGA_SWITCHEROO "/proc/sys/debug/vgaswitcheroo/switch"
 
+class QDBusConnection;
+class QDBusConnection;
 class QTimer;
 namespace Ui {
 class vgaswitcheroo;
@@ -36,9 +39,12 @@ class vgaswitcheroo;
 class QWidget;
 namespace Plasma {
 class PushButton;
+class ComboBox;
+class Label;
+class IconWidget;
 }
 class QSizeF;
-
+class OrgAdmiral0VgaSwitcherooInterface;
 class Switchy : public Plasma::Applet
 {
     Q_OBJECT
@@ -51,6 +57,8 @@ class Switchy : public Plasma::Applet
 private slots:
     void confAccepted();
     void updateApplet();
+    void statusChange(int index);
+    void unusedOff();
 
 private:
 	QList<VideoInfo*>* getInfo(); 
@@ -58,12 +66,15 @@ private:
 	QString card1name;
 	QString card2name;
 	QString vgapath;
-	Plasma::PushButton *c1;
-	Plasma::PushButton *c2;
+	Plasma::ComboBox *status;
+	Plasma::IconWidget *both;
 	QWidget *vgaswitcheroo;
 	Ui::vgaswitcheroo *ui;
 	QTimer *tmr;
+	OrgAdmiral0VgaSwitcherooInterface *dbus;
+	QDBusConnection *conn;
 	
+
 };
 
 K_EXPORT_PLASMA_APPLET(switchy, Switchy)

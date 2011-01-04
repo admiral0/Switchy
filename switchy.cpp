@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2010 by admiral0 <admiral0@tuxfamily.org>               *
+ *   Copyright (C) 2010-2011 by admiral0 <admiral0@tuxfamily.org>               *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -31,20 +31,25 @@
 #include <QLineEdit>
 #include <kconfigdialog.h>
 #include "ui_vgaswitcheroo.h"
-#include <plasma/widgets/pushbutton.h>
+#include <plasma/widgets/combobox.h>
+#include <plasma/widgets/iconwidget.h>
 #include <QGraphicsLinearLayout>
 #include <QTimer>
+#include "Vgad.h"
 Switchy::Switchy(QObject *parent, const QVariantList &args)
     : Plasma::Applet(parent, args)
 {
     setBackgroundHints(DefaultBackground);
     setHasConfigurationInterface(true);
     cards=NULL;
-    c1=new Plasma::PushButton(this);
-    c2=new Plasma::PushButton(this);
+    status=new Plasma::ComboBox(this);
+    both=new Plasma::IconWidget(this);
     ui=new Ui::vgaswitcheroo;
     setAspectRatioMode(Plasma::IgnoreAspectRatio);
     tmr=new QTimer();
+    conn=new QDBusConnection("switchy");
+    conn->connectToBus(QDBusConnection::SystemBus,"switchy");
+    dbus=new OrgAdmiral0VgaSwitcherooInterface("org.admiral0.VgaSwitcheroo","/org/admiral0/VgaSwitcheroo", *conn);
 }
 
 
@@ -52,8 +57,8 @@ Switchy::~Switchy()
 {
     if(cards)
       delete cards;
-    delete c1;
-    delete c2;delete ui;delete tmr;
+    delete status;
+    delete ui;delete tmr;
 }
 
 void Switchy::init()
@@ -73,16 +78,20 @@ void Switchy::init()
   
   //Drawing widget
   QGraphicsLinearLayout *box=new QGraphicsLinearLayout(Qt::Horizontal,this);
-  c1->setText(card1name);
-  c1->setCheckable(TRUE);
-  c2->setText(card2name);
-  c2->setCheckable(TRUE);
-  box->addItem(c1);
-  box->addItem(c2);
+  //status.addItem(i18n("Both"));
+  status->addItem(card1name);
+  status->addItem(card2name);
+  both->setIcon(QIcon::fromTheme("dialog-warning"));
+  both->setMaximumWidth(18);
+  both->setToolTip(i18n("Both graphics cards are powered.\nClick on the icon to power off the unused one"));
+  box->addItem(status);
+  box->addItem(both);
   this->setLayout(box);
   updateApplet();
   tmr->setInterval(31000);
   connect(tmr,SIGNAL(timeout()),this,SLOT(updateApplet()));
+  connect(both,SIGNAL(clicked()),this,SLOT(unusedOff()));
+  connect(status,SIGNAL(currentIndexChanged(int)),this,SLOT(statusChange(int)));
   tmr->start();
 }
 
@@ -152,27 +161,38 @@ void Switchy::updateApplet()
 {
   cards=getInfo();
   qDebug()<<cards->size()<<"So sad";
-  c1->setText(card1name);
-  c2->setText(card2name);
+  status->clear();
+  status->addItem(card1name);
+  status->addItem(card2name);
   cards=getInfo();
-  if(cards->at(0)->isUsed()){
-    c1->setText(card1name);   
-  }else{
-    c1->setText(QString("(")+card1name+")");
-  }
-  if(cards->at(0)->isPowered())
-      c1->setChecked(TRUE);
-  else
-      c1->setChecked(FALSE);
   if(cards->at(1)->isUsed()){
-    c2->setText(card2name);   
+    status->setCurrentIndex(1);
   }else{
-    c2->setText(QString("(")+card2name+")");
+    status->setCurrentIndex(0);
   }
-  if(cards->at(1)->isPowered())
-      c2->setChecked(TRUE);
-  else
-      c2->setChecked(FALSE);
+  if(cards->at(0)->isPowered() && cards->at(1)->isPowered()){
+    both->setVisible(TRUE);
+  }else{
+    both->setVisible(FALSE);
+  }
+}
+void Switchy::statusChange(int index)
+{
+  if(!cards->at(index)->isUsed()){
+    if(index==0)
+      dbus->Integrated();
+    else
+      dbus->Discrete();
+    //TODO KDM
+  }
+  
+}
+void Switchy::unusedOff()
+{
+  if(cards->at(0)->isPowered() && cards->at(1)->isPowered()){
+    dbus->CardsOff();
+    updateApplet();
+  }
 }
 
 #include "switchy.moc"
