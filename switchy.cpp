@@ -31,6 +31,8 @@
 #include <QLineEdit>
 #include <kconfigdialog.h>
 #include "ui_vgaswitcheroo.h"
+#include "ui_startup.h"
+#include "ui_appearance.h"
 #include <plasma/widgets/combobox.h>
 #include <plasma/widgets/iconwidget.h>
 #include <QGraphicsLinearLayout>
@@ -47,6 +49,8 @@ Switchy::Switchy(QObject *parent, const QVariantList &args)
     status=new Plasma::ComboBox(this);
     both=new Plasma::IconWidget(this);
     ui=new Ui::vgaswitcheroo;
+    ui1=new Ui::Startup;
+    ui2=new Ui::Appearance;
     setAspectRatioMode(Plasma::IgnoreAspectRatio);
     tmr=new QTimer();
     dbus=new OrgAdmiral0VgaSwitcherooInterface("org.admiral0.VgaSwitcheroo","/org/admiral0/VgaSwitcheroo", QDBusConnection::systemBus());
@@ -99,10 +103,16 @@ void Switchy::init()
 void Switchy::createConfigurationInterface(KConfigDialog* parent)
 {
   vgaswitcheroo=new QWidget;
+  appearance=new QWidget;
+  startup=new QWidget;
   ui->setupUi(vgaswitcheroo);
-  ui->name1->setText(card1name);
-  ui->name2->setText(card2name);
+  ui1->setupUi(startup);
+  ui2->setupUi(appearance);
+  ui2->name1->setText(card1name);
+  ui2->name2->setText(card2name);
   parent->addPage(vgaswitcheroo,i18n("Vga Switcheroo"));
+  parent->addPage(startup,i18n("Startup"));
+  parent->addPage(appearance,i18n("Appearance"));
   connect(parent,SIGNAL(applyClicked()),this,SLOT(confAccepted()));
   connect(parent,SIGNAL(okClicked()),this,SLOT(confAccepted()));
 }
@@ -110,10 +120,10 @@ void Switchy::createConfigurationInterface(KConfigDialog* parent)
 void Switchy::confAccepted()
 {
   KConfigGroup cfg = config();
-  card1name=ui->name1->text();
-  cfg.writeEntry("card1name",ui->name1->text());
-  card2name=ui->name2->text();
-  cfg.writeEntry("card2name",ui->name2->text());
+  card1name=ui2->name1->text();
+  cfg.writeEntry("card1name",ui2->name1->text());
+  card2name=ui2->name2->text();
+  cfg.writeEntry("card2name",ui2->name2->text());
   if(ui->vgaDefaultPath->isChecked()){
     cfg.writeEntry("vgapath","default");
     vgapath=VGA_SWITCHEROO;
@@ -188,7 +198,7 @@ void Switchy::statusChange(int index)
       dbus->Discrete();
     int res=KMessageBox::questionYesNo(0,i18n("Would you like to logout to switch GPU?"),"Switchy",KStandardGuiItem::yes(),KStandardGuiItem::no(),QString("switchy"));
     if(res==KMessageBox::Yes){
-      kde->logout();
+      kde->logout(0,0,0);
     }
   }
   

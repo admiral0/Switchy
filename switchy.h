@@ -34,6 +34,8 @@ class QDBusConnection;
 class QTimer;
 namespace Ui {
 class vgaswitcheroo;
+class Startup;
+class Appearance;
 }
 
 class QWidget;
@@ -68,8 +70,15 @@ private:
 	QString vgapath;
 	Plasma::ComboBox *status;
 	Plasma::IconWidget *both;
+	//First Tab
 	QWidget *vgaswitcheroo;
 	Ui::vgaswitcheroo *ui;
+	//Second Tab
+	QWidget *startup;
+	Ui::Startup *ui1;
+	//Third Tab
+	QWidget *appearance;
+	Ui::Appearance *ui2;
 	QTimer *tmr;
 	OrgAdmiral0VgaSwitcherooInterface *dbus;
 	OrgKdeKSMServerInterfaceInterface *kde;
