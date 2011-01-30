@@ -19,6 +19,9 @@
 
 #include "videoinfo.h"
 #include <QString>
+#include <qfile.h>
+#include <QDebug>
+#include <QStringList>
 
 VideoInfo::VideoInfo(){
   extra=new QString;
@@ -77,5 +80,39 @@ void VideoInfo::setUsed(bool val)
   used=val;
 }
 
-
+QList< VideoInfo*>* VideoInfo::getInfo(QString path)
+{
+  QList<VideoInfo*> *data=new QList<VideoInfo*>;
+  QFile *f=new QFile(path);
+  f->open(QIODevice::ReadOnly);
+  QString out=f->readAll();
+  qDebug()<<out;
+  f->close();
+  QStringList cards=out.split("\n",QString::SkipEmptyParts);
+  qDebug()<<cards;
+  foreach(QString card,cards){
+    qDebug()<<"Card:"<<card;
+    QStringList l= card.split(":",QString::SkipEmptyParts);
+    qDebug()<<"Parts:"<<l;
+    VideoInfo *i=new VideoInfo();
+    i->setId(l.at(0).toInt());
+    if(l.at(1)=="+")
+      i->setUsed(TRUE);
+    else
+      i->setUsed(FALSE);
+    if(l.at(2)=="Pwr")
+      i->setPowered(TRUE);
+    else
+      i->setPowered(FALSE);
+    QString e(l[3]+l[4]+l[5]);
+    i->setExtra(&e);
+    qDebug()<<"Data to append:"<<i->getId()<<i->isUsed()<<i->isPowered()<<i->getExtra();
+    data->append(i);
+  }
+  delete f;
+  qDebug()<<data->size();
+  qDebug()<<data->at(0)->getId()<<data->at(0)->isPowered();
+  qDebug()<<data->at(1)->getId()<<data->at(1)->isPowered();
+  return data;
+}
 

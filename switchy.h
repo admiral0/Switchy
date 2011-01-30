@@ -28,6 +28,7 @@
 
 #define VGA_SWITCHEROO "/proc/sys/debug/vgaswitcheroo/switch"
 
+class QSettings;
 class OrgKdeKSMServerInterfaceInterface;
 class QDBusConnection;
 class QDBusConnection;
@@ -82,6 +83,10 @@ private:
 	QTimer *tmr;
 	OrgAdmiral0VgaSwitcherooInterface *dbus;
 	OrgKdeKSMServerInterfaceInterface *kde;
+	//External settings
+	QSettings *clientSettings;
+	bool block;
+	int pending;
 	
 
 };

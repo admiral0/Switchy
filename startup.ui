@@ -38,7 +38,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QRadioButton" name="enableALL">
+       <widget class="QRadioButton" name="startupALL">
         <property name="text">
          <string>Enable Both Cards</string>
         </property>

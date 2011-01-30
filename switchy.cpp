@@ -55,6 +55,9 @@ Switchy::Switchy(QObject *parent, const QVariantList &args)
     tmr=new QTimer();
     dbus=new OrgAdmiral0VgaSwitcherooInterface("org.admiral0.VgaSwitcheroo","/org/admiral0/VgaSwitcheroo", QDBusConnection::systemBus());
     kde=new OrgKdeKSMServerInterfaceInterface("org.kde.KSMServerInterface","/KSMServer",QDBusConnection::sessionBus());
+    clientSettings=new QSettings("org.admiral0","vgad");
+    block=true;
+    pending=-1;
 }
 
 
@@ -74,7 +77,7 @@ void Switchy::init()
   vgapath=cfg.readEntry("vgapath","default");
   if(vgapath=="default")
      vgapath=VGA_SWITCHEROO;
-  cards=getInfo();
+  cards=VideoInfo::getInfo(vgapath);
   if(!cards || cards->size()==0){
     qDebug()<< "No hardware found!!!";
     setFailedToLaunch(TRUE,i18n("Vga switcheroo not found!"));
@@ -98,6 +101,7 @@ void Switchy::init()
   connect(both,SIGNAL(clicked()),this,SLOT(unusedOff()));
   connect(status,SIGNAL(currentIndexChanged(int)),this,SLOT(statusChange(int)));
   tmr->start();
+  block=false;
 }
 
 void Switchy::createConfigurationInterface(KConfigDialog* parent)
@@ -131,51 +135,26 @@ void Switchy::confAccepted()
     cfg.writeEntry("vgapath",ui->vgaPath->text());
     vgapath=ui->vgaPath->text();
   }
-  updateApplet();
-}
-QList< VideoInfo*>* Switchy::getInfo()
-{
-  QList<VideoInfo*> *data=new QList<VideoInfo*>;
-  QFile *f=new QFile(vgapath);
-  f->open(QIODevice::ReadOnly);
-  QString out=f->readAll();
-  qDebug()<<out;
-  f->close();
-  QStringList cards=out.split("\n",QString::SkipEmptyParts);
-  qDebug()<<cards;
-  foreach(QString card,cards){
-    qDebug()<<"Card:"<<card;
-    QStringList l= card.split(":",QString::SkipEmptyParts);
-    qDebug()<<"Parts:"<<l;
-    VideoInfo *i=new VideoInfo();
-    i->setId(l.at(0).toInt());
-    if(l.at(1)=="+")
-      i->setUsed(TRUE);
-    else
-      i->setUsed(FALSE);
-    if(l.at(2)=="Pwr")
-      i->setPowered(TRUE);
-    else
-      i->setPowered(FALSE);
-    QString e(l[3]+l[4]+l[5]);
-    i->setExtra(&e);
-    qDebug()<<"Data to append:"<<i->getId()<<i->isUsed()<<i->isPowered()<<i->getExtra();
-    data->append(i);
+  
+  cfg.writeEntry("atiIntelQuirk",ui->ati_intel_quirk->isChecked());
+  
+  if(ui1->startupALL->isChecked()){
+    clientSettings->setValue("startup","ALL");
+  }else if(ui1->startupDIS->isChecked()){
+    clientSettings->setValue("startup","DIS");
+  }else{
+    clientSettings->setValue("startup","IGD");
   }
-  delete f;
-  qDebug()<<data->size();
-  qDebug()<<data->at(0)->getId()<<data->at(0)->isPowered();
-  qDebug()<<data->at(1)->getId()<<data->at(1)->isPowered();
-  return data;
+  updateApplet();
 }
 void Switchy::updateApplet()
 {
-  cards=getInfo();
+  cards=VideoInfo::getInfo(vgapath);
   qDebug()<<cards->size()<<"So sad";
   status->clear();
   status->addItem(card1name);
   status->addItem(card2name);
-  cards=getInfo();
+  //cards=getInfo();
   if(cards->at(1)->isUsed()){
     status->setCurrentIndex(1);
   }else{
@@ -189,13 +168,20 @@ void Switchy::updateApplet()
 }
 void Switchy::statusChange(int index)
 {
+  if(!block || pending!=-1){
+    both->setToolTip(i18n("A switch is pending. Please logout or click here to cancel."));
+    return;
+  }
   if(index==-1)
     return;
   if(!cards->at(index)->isUsed()){
-    if(index==0)
+    if(index==0){
       dbus->Integrated();
-    else
+      pending=0;
+    }else{
+      pending=1;
       dbus->Discrete();
+    }
     int res=KMessageBox::questionYesNo(0,i18n("Would you like to logout to switch GPU?"),"Switchy",KStandardGuiItem::yes(),KStandardGuiItem::no(),QString("switchy"));
     if(res==KMessageBox::Yes){
       kde->logout(0,0,0);
@@ -205,10 +191,13 @@ void Switchy::statusChange(int index)
 }
 void Switchy::unusedOff()
 {
+  both->setToolTip(i18n("Both graphics cards are powered.\nClick on the icon to power off the unused one"));
+  updateApplet();
   if(cards->at(0)->isPowered() && cards->at(1)->isPowered()){
     dbus->CardsOff();
-    updateApplet();
   }
+  block=false;
+  pending=-1;
 }
 
 #include "switchy.moc"

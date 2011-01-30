@@ -20,7 +20,7 @@
 #ifndef VIDEOINFO_H
 #define VIDEOINFO_H
 
-class QString;
+#include <QList>
 class VideoInfo
 {
 
@@ -37,6 +37,7 @@ public:
     void setUsed(bool val);
     void setPowered(bool val);
     void setExtra(QString *val);
+    static QList< VideoInfo*>* getInfo(QString path);
 private:
   int id;
   bool used;
