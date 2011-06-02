@@ -18,186 +18,233 @@
  ***************************************************************************/
 
 #include "switchy.h"
-#include <QPainter>
-#include <QFontMetrics>
-#include <QSizeF>
-#include <KLocale>
-#include <QDebug>
-#include <plasma/svg.h>
-#include <plasma/theme.h>
-#include <QFormLayout>
-#include <QLabel>
-#include <kfiledialog.h>
-#include <QLineEdit>
-#include <kconfigdialog.h>
-#include "ui_vgaswitcheroo.h"
-#include "ui_startup.h"
-#include "ui_appearance.h"
-#include <plasma/widgets/combobox.h>
-#include <plasma/widgets/iconwidget.h>
-#include <QGraphicsLinearLayout>
-#include <QTimer>
-#include "vgad.h"
-#include "ksmserver.h"
+
+//Deps
 #include <KMessageBox>
+#include <KConfigDialog>
+#include <QGraphicsLinearLayout>
+#include <plasma/widgets/slider.h>
+#include <plasma/widgets/iconwidget.h>
+#include <plasma/widgets/pushbutton.h>
+
+// DBUS stuff
+#include "client/VgaCDbus.h"
+#include "ksmserver.h"
+
+// Uis
+#include "ui_appearance.h"
+#include "ui_startup.h"
+#include "ui_vgaswitcheroo.h"
+
+//VGA Switcheroo utils
+#include "videoinfo.h"
+
+
+
+ 
 Switchy::Switchy(QObject *parent, const QVariantList &args)
-    : Plasma::Applet(parent, args)
+    : Plasma::PopupApplet(parent, args)
 {
-    setBackgroundHints(DefaultBackground);
-    setHasConfigurationInterface(true);
-    cards=NULL;
-    status=new Plasma::ComboBox(this);
-    both=new Plasma::IconWidget(this);
-    ui=new Ui::vgaswitcheroo;
-    ui1=new Ui::Startup;
-    ui2=new Ui::Appearance;
+     setPopupIcon("cpu");
     setAspectRatioMode(Plasma::IgnoreAspectRatio);
-    tmr=new QTimer();
-    dbus=new OrgAdmiral0VgaSwitcherooInterface("org.admiral0.VgaSwitcheroo","/org/admiral0/VgaSwitcheroo", QDBusConnection::systemBus());
-    kde=new OrgKdeKSMServerInterfaceInterface("org.kde.KSMServerInterface","/KSMServer",QDBusConnection::sessionBus());
-    clientSettings=new QSettings("org.admiral0","vgad");
+    setHasConfigurationInterface(true);
+    
+    ui_vga=new Ui::vgaswitcheroo;
+    ui_startup=new Ui::Startup;
+    vgaswitcheroo=new QWidget;
+    startup=new QWidget;
+    
+    widget= new QGraphicsWidget;
+    widget->setMinimumSize(100,90);
+    QGraphicsLinearLayout *layout=new QGraphicsLinearLayout(Qt::Vertical);
+    QGraphicsLinearLayout *inner=new QGraphicsLinearLayout(Qt::Horizontal);
+    lbl_dis=new Plasma::IconWidget();
+    lbl_dis->setIcon(KIcon("audio-card"));
+    lbl_igd=new Plasma::IconWidget();
+    lbl_igd->setIcon(KIcon("cpu"));
+    btn_apply=new Plasma::PushButton();
+    btn_apply->setText(i18n("Apply"));
+    slider=new Plasma::Slider();
+    slider->setOrientation(Qt::Horizontal);
+    slider->setMaximum(2);
+    inner->addItem(lbl_igd);
+    inner->addItem(slider);
+    inner->addItem(lbl_dis);
+    inner->setAlignment(slider,Qt::AlignVCenter);
+    layout->addItem(inner);
+    layout->addItem(btn_apply);
+    widget->setLayout(layout);
+    connect(btn_apply,SIGNAL(clicked()),this,SLOT(apply()));
+    
     block=true;
     pending=-1;
+    cards=NULL;
+    
+    tmr=new QTimer;
+    dbus=new OrgAdmiral0VgaSwitcherooInterface("org.admiral0.VgaSwitcheroo","/org/admiral0/VgaSwitcheroo", QDBusConnection::systemBus());
+    kde=new OrgKdeKSMServerInterfaceInterface("org.kde.KSMServerInterface","/KSMServer",QDBusConnection::sessionBus());
+    
+    clientSettings=new QSettings("org.admiral0","vgad");
+    
+    vgapath=clientSettings->value("vgapath",VGA_SWITCHEROO).toString();
+    if(vgapath=="default"){
+      vgapath=VGA_SWITCHEROO;
+    }
 }
-
 
 Switchy::~Switchy()
 {
-    if(cards)
-      delete cards;
-    delete status;
-    delete ui;delete tmr;
-}
-
-void Switchy::init()
-{
-  KConfigGroup cfg = config();
-  card1name=cfg.readEntry("card1name","Integrated");
-  card2name=cfg.readEntry("card2name","Discrete");
-  vgapath=cfg.readEntry("vgapath","default");
-  if(vgapath=="default")
-     vgapath=VGA_SWITCHEROO;
-  cards=VideoInfo::getInfo(vgapath);
-  if(!cards || cards->size()==0){
-    qDebug()<< "No hardware found!!!";
-    setFailedToLaunch(TRUE,i18n("Vga switcheroo not found!"));
-  }
-  
-  
-  //Drawing widget
-  QGraphicsLinearLayout *box=new QGraphicsLinearLayout(Qt::Horizontal,this);
-  //status.addItem(i18n("Both"));
-  status->addItem(card1name);
-  status->addItem(card2name);
-  both->setIcon(QIcon::fromTheme("dialog-warning"));
-  both->setMaximumWidth(18);
-  both->setToolTip(i18n("Both graphics cards are powered.\nClick on the icon to power off the unused one"));
-  box->addItem(status);
-  box->addItem(both);
-  this->setLayout(box);
-  updateApplet();
-  tmr->setInterval(3000);
-  connect(tmr,SIGNAL(timeout()),this,SLOT(updateApplet()));
-  connect(both,SIGNAL(clicked()),this,SLOT(unusedOff()));
-  connect(status,SIGNAL(currentIndexChanged(int)),this,SLOT(statusChange(int)));
-  tmr->start();
-  block=false;
+  if(cards)
+    delete cards;
+  delete ui_startup; delete ui_vga;
+  //delete startup; delete vgaswitcheroo; delete appearance;
+  delete dbus; delete kde;
+  //delete widget;delete slider;delete lbl_dis;delete lbl_igd;
+  delete clientSettings;
 }
 
 void Switchy::createConfigurationInterface(KConfigDialog* parent)
 {
-  vgaswitcheroo=new QWidget;
-  appearance=new QWidget;
-  startup=new QWidget;
-  ui->setupUi(vgaswitcheroo);
-  ui1->setupUi(startup);
-  ui2->setupUi(appearance);
-  ui2->name1->setText(card1name);
-  ui2->name2->setText(card2name);
+
+  ui_vga->setupUi(vgaswitcheroo);
+  ui_startup->setupUi(startup);
   parent->addPage(vgaswitcheroo,i18n("Vga Switcheroo"));
   parent->addPage(startup,i18n("Startup"));
-  parent->addPage(appearance,i18n("Appearance"));
   connect(parent,SIGNAL(applyClicked()),this,SLOT(confAccepted()));
   connect(parent,SIGNAL(okClicked()),this,SLOT(confAccepted()));
 }
 
 void Switchy::confAccepted()
 {
-  KConfigGroup cfg = config();
-  card1name=ui2->name1->text();
-  cfg.writeEntry("card1name",ui2->name1->text());
-  card2name=ui2->name2->text();
-  cfg.writeEntry("card2name",ui2->name2->text());
-  if(ui->vgaDefaultPath->isChecked()){
+    KConfigGroup cfg = config();
+  if(ui_vga->vgaDefaultPath->isChecked()){
     cfg.writeEntry("vgapath","default");
     vgapath=VGA_SWITCHEROO;
   }else{
-    cfg.writeEntry("vgapath",ui->vgaPath->text());
-    vgapath=ui->vgaPath->text();
+    cfg.writeEntry("vgapath",ui_vga->vgaPath->text());
+    vgapath=ui_vga->vgaPath->text();
   }
   
-  cfg.writeEntry("atiIntelQuirk",ui->ati_intel_quirk->isChecked());
+  cfg.writeEntry("atiIntelQuirk",ui_vga->ati_intel_quirk->isChecked());
   
-  if(ui1->startupALL->isChecked()){
+  if(ui_startup->startupALL->isChecked()){
     clientSettings->setValue("startup","ALL");
-  }else if(ui1->startupDIS->isChecked()){
+  }else if(ui_startup->startupDIS->isChecked()){
     clientSettings->setValue("startup","DIS");
   }else{
     clientSettings->setValue("startup","IGD");
   }
   updateApplet();
 }
+
 void Switchy::updateApplet()
 {
+  if(cards)
+    delete cards;
   cards=VideoInfo::getInfo(vgapath);
-  qDebug()<<cards->size()<<"So sad";
-  status->clear();
-  status->addItem(card1name);
-  status->addItem(card2name);
-  //cards=getInfo();
-  if(cards->at(1)->isUsed()){
-    status->setCurrentIndex(1);
-  }else{
-    status->setCurrentIndex(0);
+  if(cards->size()!=2){
+    return;
   }
-  if(cards->at(0)->isPowered() && cards->at(1)->isPowered()){
-    both->setVisible(TRUE);
+  VideoInfo *first=cards->first();
+  VideoInfo *last=cards->last();
+  if(first->getType()==QString("IGD")){
+    //first IGD last DIS
+    igd=first;
+    dis=last;
   }else{
-    both->setVisible(FALSE);
+    igd=last;
+    dis=first;
+  }
+  if(igd->isUsed()){
+    if(dis->isPowered()){
+      slider->setValue(1);
+    }else{
+      slider->setValue(0);
+    }
+  }else{
+    if(igd->isPowered()){
+      slider->setValue(1);
+    }else{
+      slider->setValue(2);
+    }
+  }
+  
+  
+}
+
+
+
+
+void Switchy::init()
+{
+  updateApplet();
+  tmr->setInterval(31000);
+  connect(tmr,SIGNAL(timeout()),this,SLOT(updateApplet()));
+  tmr->start();
+}
+
+QGraphicsWidget* Switchy::graphicsWidget()
+{
+    
+    return widget;
+}
+void Switchy::powerBoth()
+{
+  if(igd->isPowered() && dis->isPowered()){
+    return;
+  }else{
+    dbus->CardsOn();
   }
 }
-void Switchy::statusChange(int index)
+
+void Switchy::powerDIS()
 {
-  if(!block || pending!=-1){
-    both->setToolTip(i18n("A switch is pending. Please logout or click here to cancel."));
-    return;
-  }
-  if(index==-1)
-    return;
-  if(!cards->at(index)->isUsed()){
-    if(index==0){
-      dbus->Integrated();
-      pending=0;
+  if(dis->isUsed()){
+    if(igd->isPowered()){
+      dbus->CardsOff();
     }else{
-      pending=1;
-      dbus->Discrete();
+      return;
     }
-    int res=KMessageBox::questionYesNo(0,i18n("Would you like to logout to switch GPU?"),"Switchy",KStandardGuiItem::yes(),KStandardGuiItem::no(),QString("switchy"));
+  }else{
+    dbus->Discrete();
+    int res=KMessageBox::questionYesNo(0,i18n("Would you like to logout to switch to discrete GPU?"),"Switchy",KStandardGuiItem::yes(),KStandardGuiItem::no(),QString("switchy"));
     if(res==KMessageBox::Yes){
       kde->logout(0,0,0);
     }
   }
-  
 }
-void Switchy::unusedOff()
+
+void Switchy::powerIGD()
 {
-  both->setToolTip(i18n("Both graphics cards are powered.\nClick on the icon to power off the unused one"));
-  updateApplet();
-  if(cards->at(0)->isPowered() && cards->at(1)->isPowered()){
-    dbus->CardsOff();
+  qDebug()<<"powerIGD"<<igd->isUsed()<<igd->isPowered()<<"DIS:"<<dis->isUsed()<<dis->isPowered();
+  if(igd->isUsed()){
+    if(dis->isPowered()){
+      dbus->CardsOff();
+    }else{
+      return;
+    }
+  }else{
+    dbus->Integrated();
+    int res=KMessageBox::questionYesNo(0,i18n("Would you like to logout to switch to integrated GPU?"),"Switchy",KStandardGuiItem::yes(),KStandardGuiItem::no(),QString("switchy"));
+    if(res==KMessageBox::Yes){
+      kde->logout(0,0,0);
+    }
   }
-  block=false;
-  pending=-1;
 }
+void Switchy::apply()
+{
+  int val=slider->value();
+  updateApplet();
+  if(val==0){
+    powerIGD();
+  }else if(val==1){
+    powerBoth();
+  }else{
+    powerDIS();
+  }
+  QTimer::singleShot(2000,this,SLOT(updateApplet()));
+}
+
+
 
 #include "switchy.moc"

@@ -21,7 +21,7 @@
 #define SWITCHY_HEADER
 
 #include <KIcon>
-#include <Plasma/Applet>
+#include <Plasma/PopupApplet>
 #include <Plasma/Svg>
 #include "videoinfo.h"
 
@@ -42,13 +42,13 @@ class Appearance;
 class QWidget;
 namespace Plasma {
 class PushButton;
-class ComboBox;
+class Slider;
 class Label;
 class IconWidget;
 }
 class QSizeF;
 class OrgAdmiral0VgaSwitcherooInterface;
-class Switchy : public Plasma::Applet
+class Switchy : public Plasma::PopupApplet
 {
     Q_OBJECT
     public:
@@ -57,38 +57,49 @@ class Switchy : public Plasma::Applet
 
         void init();
 	void createConfigurationInterface ( KConfigDialog* parent );
+	virtual QGraphicsWidget* graphicsWidget();
 private slots:
     void confAccepted();
     void updateApplet();
-    void statusChange(int index);
-    void unusedOff();
+    void apply();
+    void powerIGD();
+    void powerBoth();
+    void powerDIS();
+    
+//     void unusedOff();
 
 private:
-	QList<VideoInfo*>* getInfo(); 
+  
 	QList<VideoInfo*> *cards;
-	QString card1name;
-	QString card2name;
+	VideoInfo* igd;
+	VideoInfo* dis;
+	QString name_igd;
+	QString name_dis;
 	QString vgapath;
-	Plasma::ComboBox *status;
-	Plasma::IconWidget *both;
+	QString pending;
+	
+	QTimer *tmr;
 	//First Tab
 	QWidget *vgaswitcheroo;
-	Ui::vgaswitcheroo *ui;
+	Ui::vgaswitcheroo *ui_vga;
 	//Second Tab
 	QWidget *startup;
-	Ui::Startup *ui1;
-	//Third Tab
-	QWidget *appearance;
-	Ui::Appearance *ui2;
-	QTimer *tmr;
+	Ui::Startup *ui_startup;
+	
 	OrgAdmiral0VgaSwitcherooInterface *dbus;
 	OrgKdeKSMServerInterfaceInterface *kde;
 	//External settings
 	QSettings *clientSettings;
-	bool block;
-	int pending;
 	
-
+	//Widget
+	QGraphicsWidget *widget;
+	Plasma::Slider *slider;
+	Plasma::PushButton *btn_apply;
+	Plasma::IconWidget *lbl_igd;
+	Plasma::IconWidget *lbl_dis;
+	
+	
+	bool block;
 };
 
 K_EXPORT_PLASMA_APPLET(switchy, Switchy)

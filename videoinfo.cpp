@@ -25,10 +25,12 @@
 
 VideoInfo::VideoInfo(){
   extra=new QString;
+  type=new QString;
 }
 
 VideoInfo::~VideoInfo(){
   delete extra;
+  delete type;
 }
 
 VideoInfo& VideoInfo::operator=(const VideoInfo& other)
@@ -37,6 +39,7 @@ VideoInfo& VideoInfo::operator=(const VideoInfo& other)
     this->extra=other.extra;
     this->used=other.used;
     this->power=other.power;
+    this->type=other.type;
     return *this;
 }
 
@@ -62,7 +65,7 @@ bool VideoInfo::isUsed()
 {
   return used;
 }
-void VideoInfo::setExtra(QString* val)
+void VideoInfo::setExtra(const QString* val)
 {
   extra->clear();
   extra->append(val);
@@ -79,6 +82,18 @@ void VideoInfo::setUsed(bool val)
 {
   used=val;
 }
+QString* VideoInfo::getType()
+{
+  return type;
+}
+void VideoInfo::setType(const QString* type)
+{
+  this->type->clear();
+  this->type->append(type);
+}
+
+
+
 
 QList< VideoInfo*>* VideoInfo::getInfo(QString path)
 {
@@ -86,33 +101,32 @@ QList< VideoInfo*>* VideoInfo::getInfo(QString path)
   QFile *f=new QFile(path);
   f->open(QIODevice::ReadOnly);
   QString out=f->readAll();
-  qDebug()<<out;
+//   qDebug()<<out;
   f->close();
   QStringList cards=out.split("\n",QString::SkipEmptyParts);
-  qDebug()<<cards;
   foreach(QString card,cards){
-    qDebug()<<"Card:"<<card;
     QStringList l= card.split(":",QString::SkipEmptyParts);
-    qDebug()<<"Parts:"<<l;
+//     qDebug()<<"Aia"<<l;
     VideoInfo *i=new VideoInfo();
     i->setId(l.at(0).toInt());
-    if(l.at(1)=="+")
+    i->setType(&(l.at(1)));
+    if(l.at(2)=="+")
       i->setUsed(TRUE);
     else
       i->setUsed(FALSE);
-    if(l.at(2)=="Pwr")
+    if(l.at(3)=="Pwr")
       i->setPowered(TRUE);
     else
       i->setPowered(FALSE);
-    QString e(l[3]+l[4]+l[5]);
+    QString e(l[4]+l[5]+l[6]);
     i->setExtra(&e);
-    qDebug()<<"Data to append:"<<i->getId()<<i->isUsed()<<i->isPowered()<<i->getExtra();
+//     qDebug()<<"Data to append:"<<i->getId()<<i->isUsed()<<i->isPowered()<<i->getExtra();
     data->append(i);
   }
   delete f;
-  qDebug()<<data->size();
-  qDebug()<<data->at(0)->getId()<<data->at(0)->isPowered();
-  qDebug()<<data->at(1)->getId()<<data->at(1)->isPowered();
+   qDebug()<<data->size();
+   qDebug()<<data->at(0)->getId()<<data->at(0)->isPowered();
+    qDebug()<<data->at(1)->getId()<<data->at(1)->isPowered();
   return data;
 }
 

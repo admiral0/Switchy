@@ -33,15 +33,18 @@ public:
     bool isUsed();
     bool isPowered();
     QString* getExtra();
+    QString* getType();
     void setId(int val);
     void setUsed(bool val);
     void setPowered(bool val);
-    void setExtra(QString *val);
+    void setExtra(const QString *val);
+    void setType(const QString *type);
     static QList< VideoInfo*>* getInfo(QString path);
 private:
   int id;
   bool used;
   bool power;
+  QString *type;
   //PCI bus etc.
   QString *extra;
   

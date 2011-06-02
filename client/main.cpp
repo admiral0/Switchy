@@ -27,7 +27,7 @@ void printHelp();
 int main(int argc, char **argv){
   QCoreApplication app(argc,argv);
   if(app.arguments().size()==1){
-    cout << "error: no params\n";
+    std::cout << "error: no params\n";
     printHelp();
     return 0;
     
@@ -48,6 +48,8 @@ int main(int argc, char **argv){
       vgad.Discrete();
     }else if(action=="--all"){
       vgad.CardsOn();
+    }else if(action=="--off"){
+      vgad.CardsOff();
     }else if(action=="--help"){
       printHelp();
     }else{
@@ -65,5 +67,6 @@ void printHelp()
   cout << "\t--igd\t" << "Enable integrated card.\n";
   cout << "\t--dis\t" << "Enable discrete card.\n";
   cout << "\t--all\t" << "Enable both cards. Depends on your system which one will be used (usually integrated).\n";
+  cout << "\t--off\t" << "Disable unused card if possible\n";
   cout << "\t--help\t" << "Get this information.\n";
 }
