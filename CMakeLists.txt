@@ -29,4 +29,3 @@ install(FILES plasma-applet-switchy.desktop
 
 add_subdirectory(daemon)
 add_subdirectory(client)
-add_subdirectory(icons)

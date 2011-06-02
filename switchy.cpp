@@ -28,11 +28,10 @@
 #include <plasma/widgets/pushbutton.h>
 
 // DBUS stuff
-#include "client/VgaCDbus.h"
+#include "vgad.h"
 #include "ksmserver.h"
 
 // Uis
-#include "ui_appearance.h"
 #include "ui_startup.h"
 #include "ui_vgaswitcheroo.h"
 
