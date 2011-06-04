@@ -124,9 +124,6 @@ QList< VideoInfo*>* VideoInfo::getInfo(QString path)
     data->append(i);
   }
   delete f;
-   qDebug()<<data->size();
-   qDebug()<<data->at(0)->getId()<<data->at(0)->isPowered();
-    qDebug()<<data->at(1)->getId()<<data->at(1)->isPowered();
   return data;
 }
 
